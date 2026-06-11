@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buat Link Undangan</title>
+  <style>
+    body { font-family: sans-serif; background: #FAF7F2; padding: 20px; color: #333; }
+    .card { background: white; padding: 25px; border-radius: 12px; max-width: 450px; margin: 40px auto; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; }
+    h2 { color: #4A5E4A; margin-bottom: 5px; }
+    p.subtitle { color: #7A7A7A; font-size: 14px; margin-bottom: 20px; }
+    label { font-weight: bold; margin-top: 15px; display: block; font-size: 14px; text-align: left; color: #555;}
+    input { width: 100%; padding: 12px; margin-top: 8px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px;}
+    button { width: 100%; background: #4A5E4A; color: white; padding: 14px; margin-top: 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; transition: background 0.3s;}
+    button:hover { background: #3d4f3d; }
+    #resultBox { margin-top: 25px; padding: 15px; background: #f9f9f9; border: 1px solid #eee; border-radius: 8px; display: none; }
+    .link-box { background: white; padding: 12px; border: 1px solid #ddd; word-wrap: break-word; font-size: 14px; margin: 10px 0; border-radius: 4px; color: #2C2C2C; }
+    .btn-copy { background: #C8A96E; margin-top: 0; padding: 10px; font-size: 14px;}
+    .btn-copy:hover { background: #b59863; }
+    
+    /* Loading overlay */
+    #loading { display: none; color: #4A5E4A; font-weight: bold; margin-bottom: 15px; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2 id="welcome-text">Memuat Data...</h2>
+    <p class="subtitle">Buat link khusus untuk tamu undangan kalian.</p>
+    
+    <div id="loading">Memeriksa database...</div>
+
+    <div id="form-container" style="display: none;">
+      <label>Nama Tamu</label>
+      <input type="text" id="namaTamu" placeholder="Contoh: Budi Santoso" required>
+
+      <button id="btnGenerate">Generate Link</button>
+    </div>
+
+    <div id="resultBox">
+      <p style="font-size: 13px; color: gray; margin-top:0;">Copy link di bawah ini dan kirim ke tamu:</p>
+      <div class="link-box" id="linkTamu"></div>
+      <button class="btn-copy" id="btnCopy">Salin Link</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // !!! GANTI DENGAN KODE FIREBASE LU !!!
+    const firebaseConfig = {
+        apiKey: "AIzaSyCB2R1VR8G4aE8E0kLfUr0FwLWmtpE1_uI",
+        authDomain: "paji-undangan-digital.firebaseapp.com",
+         projectId: "paji-undangan-digital",
+        storageBucket: "paji-undangan-digital.firebasestorage.app",
+        messagingSenderId: "395672898364",
+        appId: "1:395672898364:web:a834e8b09e5b866c3a6c39"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // MENGAMBIL ID DARI URL (contoh: ?id=jihan-edo)
+    const urlParams = new URLSearchParams(window.location.search);
+    const idUndangan = urlParams.get('id');
+
+    const welcomeText = document.getElementById("welcome-text");
+    const formContainer = document.getElementById("form-container");
+    const loading = document.getElementById("loading");
+
+    // LOGIKA PERTAMA KALI DIBUKA
+    async function cekDataCustomer() {
+      if (!idUndangan) {
+        welcomeText.innerText = "Akses Ditolak";
+        loading.innerText = "Link tidak valid. Pastikan link berisi ID yang benar.";
+        loading.style.display = "block";
+        return;
+      }
+
+      loading.style.display = "block";
+
+      try {
+        const docRef = doc(db, "invitations", idUndangan);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          // Ubah tulisan memuat jadi nama mempelai
+          welcomeText.innerText = `Halo, ${data.mempelai_wanita} & ${data.mempelai_pria}!`;
+          loading.style.display = "none";
+          formContainer.style.display = "block";
+        } else {
+          welcomeText.innerText = "Data Tidak Ditemukan";
+          loading.innerText = "ID Undangan tidak terdaftar di sistem.";
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        welcomeText.innerText = "Terjadi Kesalahan";
+        loading.innerText = "Gagal terhubung ke database.";
+      }
+    }
+
+    cekDataCustomer();
+
+    // LOGIKA GENERATE LINK
+    const btnGenerate = document.getElementById("btnGenerate");
+    btnGenerate.addEventListener("click", () => {
+      const nama = document.getElementById("namaTamu").value.trim();
+      
+      if(!nama) {
+        alert("Nama tamu tidak boleh kosong!");
+        return;
+      }
+
+      // Encode nama agar aman di URL (spasi jadi %20)
+      const encodedNama = encodeURIComponent(nama);
+      
+      // Susun URL untuk tamu (mengarah ke index.html)
+      const domainKita = window.location.origin + window.location.pathname.replace('generator.html', '');
+      const finalLink = `${domainKita}index.html?id=${idUndangan}&to=${encodedNama}`;
+      
+      document.getElementById("linkTamu").innerText = finalLink;
+      document.getElementById("resultBox").style.display = "block";
+    });
+
+    // LOGIKA TOMBOL COPY
+    const btnCopy = document.getElementById("btnCopy");
+    btnCopy.addEventListener("click", () => {
+      const link = document.getElementById("linkTamu").innerText;
+      navigator.clipboard.writeText(link).then(() => {
+        btnCopy.innerText = "✓ Berhasil Disalin";
+        btnCopy.style.background = "#7A9A7A";
+        setTimeout(() => {
+          btnCopy.innerText = "Salin Link";
+          btnCopy.style.background = "#C8A96E";
+        }, 2000);
+      });
+    });
+  </script>
+</body>
+</html>
