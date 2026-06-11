@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Generator Undangan</title>
+  <style>
+    body { font-family: sans-serif; background: #f4f4f9; padding: 20px; }
+    .card { background: white; padding: 20px; border-radius: 8px; max-width: 500px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #333; }
+    label { font-weight: bold; margin-top: 10px; display: block; font-size: 14px;}
+    input, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;}
+    button { width: 100%; background: #4CAF50; color: white; padding: 12px; margin-top: 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;}
+    button:hover { background: #45a049; }
+    #resultBox { margin-top: 20px; padding: 15px; background: #e7f3fe; border-left: 5px solid #2196F3; display: none; }
+    .link-box { background: white; padding: 10px; border: 1px solid #ccc; word-wrap: break-word; font-size: 13px; margin-top: 5px;}
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>Buat Undangan Baru</h2>
+    
+    <label>ID Customer (Contoh: jihan-edo)</label>
+    <input type="text" id="id_undangan" placeholder="Ketik ID unik tanpa spasi" required>
+
+    <label>Pilih Template</label>
+    <select id="template_pilihan">
+      <option value="1">Template 1 - Sage Green (Botanical)</option>
+      <option value="2">Template 2 - Elegant Gold</option>
+      <option value="3">Template 3 - Minimalist Monokrom</option>
+      <option value="4">Template 4 - Rustic Wood</option>
+      <option value="5">Template 5 - Navy Blue</option>
+    </select>
+
+    <label>Nama Mempelai Pria</label>
+    <input type="text" id="pria" placeholder="Nama Pria">
+
+    <label>Nama Mempelai Wanita</label>
+    <input type="text" id="wanita" placeholder="Nama Wanita">
+
+    <label>Lokasi Acara</label>
+    <input type="text" id="lokasi" placeholder="Lokasi Lengkap">
+
+    <button id="btnSimpan">Simpan & Generate Link</button>
+
+    <!-- Tempat memunculkan link setelah sukses -->
+    <div id="resultBox">
+      <p><strong>BERHASIL!</strong> Berikut adalah link untuk Customer:</p>
+      <p style="font-size: 12px; color: gray;">Kirim link ini ke mempelai agar mereka bisa input nama tamu.</p>
+      <div class="link-box" id="linkCustomer"></div>
+    </div>
+  </div>
+
+  <!-- FIREBASE SCRIPT -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // !!! GANTI DENGAN KODE FIREBASE LU !!!
+    const firebaseConfig = {
+  apiKey: "AIzaSyCB2R1VR8G4aE8E0kLfUr0FwLWmtpE1_uI",
+  authDomain: "paji-undangan-digital.firebaseapp.com",
+  projectId: "paji-undangan-digital",
+  storageBucket: "paji-undangan-digital.firebasestorage.app",
+  messagingSenderId: "395672898364",
+  appId: "1:395672898364:web:a834e8b09e5b866c3a6c39"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const btnSimpan = document.getElementById("btnSimpan");
+    
+    btnSimpan.addEventListener("click", async () => {
+      const idUndangan = document.getElementById("id_undangan").value.replace(/\s+/g, '-').toLowerCase();
+      const template = document.getElementById("template_pilihan").value;
+      const pria = document.getElementById("pria").value;
+      const wanita = document.getElementById("wanita").value;
+      const lokasi = document.getElementById("lokasi").value;
+
+      if(!idUndangan) {
+        alert("ID Customer wajib diisi!");
+        return;
+      }
+
+      btnSimpan.innerText = "Menyimpan...";
+      
+      try {
+        // Menyimpan data ke folder 'invitations' dengan ID yang diketik
+        await setDoc(doc(db, "invitations", idUndangan), {
+          template_pilihan: template,
+          mempelai_pria: pria,
+          mempelai_wanita: wanita,
+          lokasi_akad: lokasi
+        });
+
+        // Menampilkan kotak hasil
+        const domainKita = window.location.origin + window.location.pathname.replace('admin.html', '');
+        const urlCustomer = `${domainKita}generator.html?id=${idUndangan}`;
+        
+        document.getElementById("linkCustomer").innerText = urlCustomer;
+        document.getElementById("resultBox").style.display = "block";
+
+      } catch (error) {
+        console.error("Error: ", error);
+        alert("Gagal menyimpan data!");
+      } finally {
+        btnSimpan.innerText = "Simpan & Generate Link";
+      }
+    });
+  </script>
+</body>
+</html>
